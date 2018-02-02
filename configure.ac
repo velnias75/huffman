@@ -10,12 +10,15 @@ AM_MAINTAINER_MODE
 
 # Checks for programs.
 AC_PROG_CXX
+AC_PROG_CC
 
 # Checks for libraries.
 
 # Checks for header files.
+AC_CHECK_HEADER_STDBOOL
 
 # Checks for typedefs, structures, and compiler characteristics.
+AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
 
 # Checks for library functions.
 

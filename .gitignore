@@ -1,3 +1,4 @@
+*~
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -16,3 +17,6 @@ src/Makefile
 stamp-h1
 src/*.o
 src/huffman
+autoscan-2.69.log
+compile
+configure.scan
