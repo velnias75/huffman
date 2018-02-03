@@ -23,13 +23,15 @@ private:
 	typedef class _alphabet_entry {
 	public:
 
-		explicit _alphabet_entry(const probability_type& p) : m_node(true), m_active(0u),
+		enum { NOT_LEAST = 0u, FIRST_LEAST = 1u, SECOND_LEAST = 2u};
+
+		explicit _alphabet_entry(const probability_type& p) : m_active(NOT_LEAST),
 			m_character(0), m_probability(p) {}
 
-		_alphabet_entry(const character_type& c, const probability_type& p, unsigned char a = 0u) :
-			m_node(false), m_active(a), m_character(c), m_probability(p) {}
+		_alphabet_entry(const character_type& c, const probability_type& p,
+			unsigned char a = NOT_LEAST) : m_active(a), m_character(c), m_probability(p) {}
 
-		void setActive(unsigned char p = 0u) {
+		void setActive(unsigned char p) {
 			m_active = p;
 		}
 
@@ -45,12 +47,7 @@ private:
 			return m_probability;
 		}
 
-		bool node() const {
-			return m_node;
-		}
-
 	private:
-		bool m_node;
 		unsigned char m_active;
 		character_type m_character;
 		probability_type m_probability;
@@ -69,10 +66,6 @@ private:
 		_column_entry() : m_entry(character_type(0), probability_type(0)) {}
 
 		_column_entry(const column_entry_type& e) : m_entry(e) {}
-
-		bool node() const {
-			return m_entry.node();
-		}
 
 		void setActive(unsigned char p) {
 			m_entry.setActive(p);
@@ -105,10 +98,10 @@ private:
 	typedef std::vector<COLUMN_ENTRY> COLUMN;
 
 	typedef struct _node {
-		typedef std::deque<character_type> NAME;
 
+		bool leaf;
 		std::size_t row;
-		NAME name;
+		character_type name;
 		probability_type probability;
 
 		friend bool operator==(const _node &x, const _node &y) {
@@ -157,7 +150,7 @@ public:
 			p = !!(c & (1 << bit)) ? p->right : p->left;
 
 			if(!(p->left || p->right)) {
-				n.push_back(p->node->name.front());
+				n.push_back(p->node->name);
 				p = m_tree;
 			}
 
@@ -189,7 +182,7 @@ private:
 			tp->right->node = &(*i);
 			tp->left  = new TREE_NODE();
 			tp->left->node = &(*(++i));
-			tp = tp->right->node->name.size() == 1u ? tp->left : tp->right;
+			tp = tp->right->node->leaf ? tp->left : tp->right;
 		}
 
 		return t;
@@ -208,8 +201,10 @@ private:
 			typename COLUMN::value_type minima[2];
 
 			std::partial_sort_copy(std::begin(col), std::end(col), minima, minima + 2);
-			std::find(std::begin(*i), std::end(*i), minima[0])->setActive(1u);
-			std::find(std::begin(*i), std::end(*i), minima[1])->setActive(2u);
+			std::find(std::begin(*i), std::end(*i),
+				minima[0])->setActive(ALPHABET_ENTRY::FIRST_LEAST);
+			std::find(std::begin(*i), std::end(*i),
+				minima[1])->setActive(ALPHABET_ENTRY::SECOND_LEAST);
 
 			c.push_back(COLUMN());
 
@@ -234,32 +229,11 @@ private:
 		std::size_t p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { p, typename NODE::NAME { i->character() },
-				probability_type(i->probability()) });
+			n.push_back(NODE { true, p, i->character(), probability_type(i->probability()) });
 		}
 
-		typename NODE::NAME pname;
-
 		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
-
-			n.push_back(NODE { p, typename NODE::NAME(std::begin(pname), std::end(pname)),
-				probability_type((i + 1u)->back().probability()) });
-
-			for(auto j(std::begin(*i)); j != std::end(*i); ++j) {
-
-				const character_type &c(j->character());
-
-				if(!j->node()) {
-					if(j->active() == 1u) {
-						n.back().name.push_front(c);
-					} else if(j->active() == 2u) {
-						n.back().name.push_back(c);
-					}
-				}
-			}
-
-			pname.clear();
-			pname.insert(std::end(pname), std::begin(n.back().name), std::end(n.back().name));
+			n.push_back(NODE { false, p, 0, probability_type((i + 1u)->back().probability()) });
 		}
 
 		std::sort(std::begin(n), std::end(n));
