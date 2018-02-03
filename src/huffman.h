@@ -23,14 +23,17 @@ private:
 	typedef class _alphabet_entry {
 	public:
 
-		_alphabet_entry(const character_type& c, const probability_type& p, bool a = false) :
-			m_active(a), m_character(c), m_probability(p) {}
+		explicit _alphabet_entry(const probability_type& p) : m_node(true), m_active(0u),
+			m_character(0), m_probability(p) {}
 
-		void setActive(std::size_t p = 0u) {
+		_alphabet_entry(const character_type& c, const probability_type& p, unsigned char a = 0u) :
+			m_node(false), m_active(a), m_character(c), m_probability(p) {}
+
+		void setActive(unsigned char p = 0u) {
 			m_active = p;
 		}
 
-		std::size_t active() const {
+		unsigned char active() const {
 			return m_active;
 		}
 
@@ -42,8 +45,13 @@ private:
 			return m_probability;
 		}
 
+		bool node() const {
+			return m_node;
+		}
+
 	private:
-		std::size_t m_active;
+		bool m_node;
+		unsigned char m_active;
 		character_type m_character;
 		probability_type m_probability;
 	} ALPHABET_ENTRY;
@@ -62,11 +70,15 @@ private:
 
 		_column_entry(const column_entry_type& e) : m_entry(e) {}
 
-		void setActive(std::size_t p) {
+		bool node() const {
+			return m_entry.node();
+		}
+
+		void setActive(unsigned char p) {
 			m_entry.setActive(p);
 		}
 
-		std::size_t active() const {
+		unsigned char active() const {
 			return m_entry.active();
 		}
 
@@ -169,17 +181,14 @@ private:
 	TREE *build_tree(const NODES &n) {
 
 		TREE *tp = new TREE(), *t = tp;
-		NODES naux(n);
 
-		std::sort(std::begin(naux), std::end(naux));
+		tp->node = &n.front();
 
-		tp->node = &(*std::find(std::begin(n), std::end(n), naux.front()));
-
-		for(auto i(std::begin(naux) + 1u); i != std::end(naux); ++i) {
+		for(auto i(std::begin(n) + 1u); i != std::end(n); ++i) {
 			tp->right = new TREE_NODE();
-			tp->right->node = &(*std::find(std::begin(n), std::end(n), *i));
+			tp->right->node = &(*i);
 			tp->left  = new TREE_NODE();
-			tp->left->node = &(*std::find(std::begin(n), std::end(n), *(++i)));
+			tp->left->node = &(*(++i));
 			tp = tp->right->node->name.size() == 1u ? tp->left : tp->right;
 		}
 
@@ -199,8 +208,8 @@ private:
 			typename COLUMN::value_type minima[2];
 
 			std::partial_sort_copy(std::begin(col), std::end(col), minima, minima + 2);
-			std::find(std::begin(*i), std::end(*i), minima[0])->setActive(1);
-			std::find(std::begin(*i), std::end(*i), minima[1])->setActive(2);
+			std::find(std::begin(*i), std::end(*i), minima[0])->setActive(1u);
+			std::find(std::begin(*i), std::end(*i), minima[1])->setActive(2u);
 
 			c.push_back(COLUMN());
 
@@ -209,7 +218,7 @@ private:
 					{ return x.probability() != minima[0].probability() &&
 						 x.probability() != minima[1].probability(); });
 
-			c.back().push_back(typename ALPHABET::value_type(0,
+			c.back().push_back(typename ALPHABET::value_type(
 				minima[0].probability() + minima[1].probability()));
 
 			i = --end(c);
@@ -240,7 +249,7 @@ private:
 
 				const character_type &c(j->character());
 
-				if(c != character_type(0)) {
+				if(!j->node()) {
 					if(j->active() == 1u) {
 						n.back().name.push_front(c);
 					} else if(j->active() == 2u) {
@@ -252,6 +261,8 @@ private:
 			pname.clear();
 			pname.insert(std::end(pname), std::begin(n.back().name), std::end(n.back().name));
 		}
+
+		std::sort(std::begin(n), std::end(n));
 
 		return n;
 	}
