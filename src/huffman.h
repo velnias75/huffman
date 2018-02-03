@@ -9,6 +9,10 @@ namespace huffman {
 
 template<class C, class P = double>
 class huffman {
+
+	huffman(const huffman&);
+	huffman& operator=(const huffman&);
+
 public:
 	typedef C character_type;
 	typedef P probability_type;
@@ -87,25 +91,74 @@ private:
 
 	typedef std::vector<COLUMN_ENTRY> COLUMN;
 
-	typedef struct {
+	typedef struct _node {
 		typedef std::deque<character_type> NAME;
+
 		std::size_t row;
 		NAME name;
 		probability_type probability;
+
+		friend bool operator<(const _node& x, const _node& y) {
+			return x.probability > y.probability;
+		}
+
 	} NODE;
 
-public:
-
 	typedef std::vector<COLUMN> COLUMNS;
+
+	typedef struct _tree_node {
+		_tree_node() : node(0L), left(0L), right(0L) {}
+		const NODE *node;
+		_tree_node *left;
+		_tree_node *right;
+	} TREE_NODE;
+
 	typedef std::vector<NODE> NODES;
 
-	explicit huffman(const ALPHABET& a) : m_nodes(build_nodes(build_table(a))) {}
+public:
+	typedef _tree_node TREE;
 
-	NODES nodes() const {
-		return m_nodes;
+	explicit huffman(const ALPHABET& a) : m_nodes(build_nodes(build_table(a))),
+		m_tree(new TREE(build_tree(m_nodes))) {}
+
+	~huffman() {
+		delete_tree(m_tree);
+	}
+
+	TREE tree() const {
+		return *m_tree;
 	}
 
 private:
+
+	void delete_tree(_tree_node *n) {
+
+		if(n->left) delete_tree(n->left);
+		if(n->right) delete_tree(n->right);
+
+		delete n;
+	}
+
+	TREE build_tree(const NODES &n) {
+
+		TREE t, *tp = &t;
+		NODES naux(n);
+
+		std::sort(std::begin(naux), std::end(naux));
+
+		tp->node = &naux.front();
+
+		for(auto i(std::begin(naux) + 1u); i != std::end(naux); ++i) {
+			tp->right = new TREE_NODE();
+			tp->right->node = &(*i);
+			tp->left  = new TREE_NODE();
+			tp->left->node = &(*(++i));
+			tp = tp->right->node->name.size() == 1u ? tp->left : tp->right;
+		}
+
+		return t;
+	}
+
 	COLUMNS build_table(const ALPHABET& a) {
 
 		COLUMNS c { COLUMN(std::begin(a), std::end(a)) };
@@ -157,10 +210,15 @@ private:
 				probability_type((i + 1u)->back().probability()) });
 
 			for(auto j(std::begin(*i)); j != std::end(*i); ++j) {
-				if(j->active() == 1u) {
-					n.back().name.push_front(j->character());
-				} else if(j->active() == 2u) {
-					n.back().name.push_back(j->character());
+
+				const character_type &c(j->character());
+
+				if(c != character_type(0)) {
+					if(j->active() == 1u) {
+						n.back().name.push_front(c);
+					} else if(j->active() == 2u) {
+						n.back().name.push_back(c);
+					}
 				}
 			}
 
@@ -173,6 +231,7 @@ private:
 
 private:
 	NODES m_nodes;
+	TREE  *m_tree;
 };
 
 }
