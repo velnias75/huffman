@@ -23,21 +23,10 @@ private:
 	typedef class _alphabet_entry {
 	public:
 
-		enum { NOT_LEAST = 0u, FIRST_LEAST = 1u, SECOND_LEAST = 2u};
+		explicit _alphabet_entry(const probability_type& p) : m_character(0), m_probability(p) {}
 
-		explicit _alphabet_entry(const probability_type& p) : m_active(NOT_LEAST),
-			m_character(0), m_probability(p) {}
-
-		_alphabet_entry(const character_type& c, const probability_type& p,
-			unsigned char a = NOT_LEAST) : m_active(a), m_character(c), m_probability(p) {}
-
-		void setActive(unsigned char p) {
-			m_active = p;
-		}
-
-		unsigned char active() const {
-			return m_active;
-		}
+		_alphabet_entry(const character_type& c, const probability_type& p)
+			: m_character(c), m_probability(p) {}
 
 		character_type character() const {
 			return m_character;
@@ -48,7 +37,6 @@ private:
 		}
 
 	private:
-		unsigned char m_active;
 		character_type m_character;
 		probability_type m_probability;
 	} ALPHABET_ENTRY;
@@ -66,14 +54,6 @@ private:
 		_column_entry() : m_entry(character_type(0), probability_type(0)) {}
 
 		_column_entry(const column_entry_type& e) : m_entry(e) {}
-
-		void setActive(unsigned char p) {
-			m_entry.setActive(p);
-		}
-
-		unsigned char active() const {
-			return m_entry.active();
-		}
 
 		character_type character() const {
 			return m_entry.character();
@@ -201,10 +181,6 @@ private:
 			typename COLUMN::value_type minima[2];
 
 			std::partial_sort_copy(std::begin(col), std::end(col), minima, minima + 2);
-			std::find(std::begin(*i), std::end(*i),
-				minima[0])->setActive(ALPHABET_ENTRY::FIRST_LEAST);
-			std::find(std::begin(*i), std::end(*i),
-				minima[1])->setActive(ALPHABET_ENTRY::SECOND_LEAST);
 
 			c.push_back(COLUMN());
 
