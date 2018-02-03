@@ -79,10 +79,10 @@ private:
 
 	typedef struct _node {
 
-		bool leaf;
-		std::size_t row;
+		typename std::vector<_node>::size_type row;
 		character_type name;
 		probability_type probability;
+		bool leaf;
 
 		friend bool operator==(const _node &x, const _node &y) {
 			return x.row == y.row;
@@ -205,11 +205,11 @@ private:
 		std::size_t p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { true, p, i->character(), probability_type(i->probability()) });
+			n.push_back(NODE { p, i->character(), probability_type(i->probability()), true });
 		}
 
 		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
-			n.push_back(NODE { false, p, 0, probability_type((i + 1u)->back().probability()) });
+			n.push_back(NODE { p, 0, probability_type((i + 1u)->back().probability()), false });
 		}
 
 		std::sort(std::begin(n), std::end(n));
