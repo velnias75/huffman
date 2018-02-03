@@ -16,7 +16,12 @@ int main(int, char **) {
 		HUFFMAN::value_type('U', 0.07)
 	});
 
-	//const HUFFMAN::TREE  &t(huff.tree());
+	HUFFMAN::NAME n(vowellish.decode(762u, 10u));
+
+	std::cout << "Decoded: ";
+	std::copy(std::begin(n), std::end(n),
+		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
+	std::cout << std::endl;
 
 	return EXIT_SUCCESS;
 }

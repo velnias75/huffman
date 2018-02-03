@@ -16,6 +16,7 @@ class huffman {
 public:
 	typedef C character_type;
 	typedef P probability_type;
+	typedef std::deque<character_type> NAME;
 
 private:
 
@@ -92,11 +93,14 @@ private:
 	typedef std::vector<COLUMN_ENTRY> COLUMN;
 
 	typedef struct _node {
-		typedef std::deque<character_type> NAME;
 
 		std::size_t row;
 		NAME name;
 		probability_type probability;
+
+		friend bool operator==(const _node &x, const _node &y) {
+			return x.row == y.row;
+		}
 
 		friend bool operator<(const _node& x, const _node& y) {
 			return x.probability > y.probability;
@@ -119,7 +123,7 @@ public:
 	typedef _tree_node TREE;
 
 	explicit huffman(const ALPHABET& a) : m_nodes(build_nodes(build_table(a))),
-		m_tree(new TREE(build_tree(m_nodes))) {}
+		m_tree(build_tree(m_nodes)) {}
 
 	~huffman() {
 		delete_tree(m_tree);
@@ -127,6 +131,32 @@ public:
 
 	TREE tree() const {
 		return *m_tree;
+	}
+
+	NAME decode(unsigned int c, std::size_t nbits) {
+
+		NAME n;
+		std::size_t bit(1);
+		const TREE *p = m_tree;
+
+		do {
+
+			if(!!(c & (1 << bit))) {
+				p = p->right;
+			} else {
+				p = p->left;
+			}
+
+			if(!(p->left || p->right)) {
+				n.push_back(p->node->name.front());
+				p = m_tree;
+			}
+
+			++bit;
+
+		} while(bit <= nbits);
+
+		return n;
 	}
 
 private:
@@ -139,20 +169,20 @@ private:
 		delete n;
 	}
 
-	TREE build_tree(const NODES &n) {
+	TREE *build_tree(const NODES &n) {
 
-		TREE t, *tp = &t;
+		TREE *tp = new TREE(), *t = tp;
 		NODES naux(n);
 
 		std::sort(std::begin(naux), std::end(naux));
 
-		tp->node = &naux.front();
+		tp->node = &(*std::find(std::begin(n), std::end(n), naux.front()));
 
 		for(auto i(std::begin(naux) + 1u); i != std::end(naux); ++i) {
 			tp->right = new TREE_NODE();
-			tp->right->node = &(*i);
+			tp->right->node = &(*std::find(std::begin(n), std::end(n), *i));
 			tp->left  = new TREE_NODE();
-			tp->left->node = &(*(++i));
+			tp->left->node = &(*std::find(std::begin(n), std::end(n), *(++i)));
 			tp = tp->right->node->name.size() == 1u ? tp->left : tp->right;
 		}
 
@@ -198,15 +228,14 @@ private:
 		std::size_t p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { p, typename NODE::NAME { i->character() },
-				probability_type(i->probability()) });
+			n.push_back(NODE { p, NAME { i->character() }, probability_type(i->probability()) });
 		}
 
-		typename NODE::NAME pname;
+		NAME pname;
 
 		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
 
-			n.push_back(NODE { p, typename NODE::NAME(std::begin(pname), std::end(pname)),
+			n.push_back(NODE { p, NAME(std::begin(pname), std::end(pname)),
 				probability_type((i + 1u)->back().probability()) });
 
 			for(auto j(std::begin(*i)); j != std::end(*i); ++j) {
