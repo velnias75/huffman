@@ -6,7 +6,7 @@
 
 int main(int, char **) {
 
-	typedef huffman::huffman<char> HUFFMAN;
+	typedef huffman::huffman<char, float> HUFFMAN;
 
 	HUFFMAN vowellish({
 		HUFFMAN::value_type('A', 0.12),

@@ -52,7 +52,7 @@ private:
 
 		_column_entry() : m_entry(character_type(0), probability_type(0)) {}
 
-		_column_entry(const column_entry_type& e) : m_entry(e) {}
+		explicit _column_entry(const column_entry_type& e) : m_entry(e) {}
 
 		character_type character() const {
 			return m_entry.character();
@@ -79,8 +79,8 @@ private:
 	typedef struct _node {
 
 		typename std::vector<_node>::size_type row;
-		character_type name;
 		probability_type probability;
+		character_type name;
 		bool leaf;
 
 		friend bool operator==(const _node &x, const _node &y) {
@@ -114,11 +114,7 @@ public:
 		delete_tree(m_tree);
 	}
 
-	TREE tree() const {
-		return *m_tree;
-	}
-
-	CSEQ decode(unsigned int c, std::size_t nbits) {
+	CSEQ decode(unsigned int c, std::size_t nbits) const {
 
 		CSEQ n;
 		std::size_t bit(1);
@@ -188,8 +184,8 @@ private:
 					{ return x.probability() != minima[0].probability() &&
 						 x.probability() != minima[1].probability(); });
 
-			c.back().push_back(typename ALPHABET::value_type(
-				minima[0].probability() + minima[1].probability()));
+			c.back().push_back(COLUMN_ENTRY(typename ALPHABET::value_type(
+				minima[0].probability() + minima[1].probability())));
 
 			i = --end(c);
 
@@ -198,17 +194,17 @@ private:
 		return c;
 	}
 
-	NODES build_nodes(const COLUMNS &t) {
+	static NODES build_nodes(const COLUMNS &t) {
 
 		NODES n;
 		typename COLUMNS::size_type p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { p, i->character(), probability_type(i->probability()), true });
+			n.push_back(NODE { p, probability_type(i->probability()), i->character(), true });
 		}
 
 		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
-			n.push_back(NODE { p, 0, probability_type((i + 1u)->back().probability()), false });
+			n.push_back(NODE { p, probability_type((i + 1u)->back().probability()), 0, false });
 		}
 
 		std::sort(std::begin(n), std::end(n));
@@ -218,7 +214,7 @@ private:
 
 private:
 	const NODES m_nodes;
-	TREE *m_tree;
+	TREE * const m_tree;
 };
 
 }
