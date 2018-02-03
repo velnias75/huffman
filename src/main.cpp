@@ -16,7 +16,7 @@ int main(int, char **) {
 		HUFFMAN::value_type('U', 0.07)
 	});
 
-	HUFFMAN::NAME n(vowellish.decode(762u, 10u));
+	HUFFMAN::CSEQ n(vowellish.decode(762u, 10u));
 
 	std::cout << "Decoded: ";
 	std::copy(std::begin(n), std::end(n),

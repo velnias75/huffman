@@ -16,7 +16,7 @@ class huffman {
 public:
 	typedef C character_type;
 	typedef P probability_type;
-	typedef std::deque<character_type> NAME;
+	typedef std::vector<character_type> CSEQ;
 
 private:
 
@@ -93,6 +93,7 @@ private:
 	typedef std::vector<COLUMN_ENTRY> COLUMN;
 
 	typedef struct _node {
+		typedef std::deque<character_type> NAME;
 
 		std::size_t row;
 		NAME name;
@@ -133,19 +134,15 @@ public:
 		return *m_tree;
 	}
 
-	NAME decode(unsigned int c, std::size_t nbits) {
+	CSEQ decode(unsigned int c, std::size_t nbits) {
 
-		NAME n;
+		CSEQ n;
 		std::size_t bit(1);
 		const TREE *p = m_tree;
 
 		do {
 
-			if(!!(c & (1 << bit))) {
-				p = p->right;
-			} else {
-				p = p->left;
-			}
+			p = !!(c & (1 << bit)) ? p->right : p->left;
 
 			if(!(p->left || p->right)) {
 				n.push_back(p->node->name.front());
@@ -228,14 +225,15 @@ private:
 		std::size_t p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { p, NAME { i->character() }, probability_type(i->probability()) });
+			n.push_back(NODE { p, typename NODE::NAME { i->character() },
+				probability_type(i->probability()) });
 		}
 
-		NAME pname;
+		typename NODE::NAME pname;
 
 		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
 
-			n.push_back(NODE { p, NAME(std::begin(pname), std::end(pname)),
+			n.push_back(NODE { p, typename NODE::NAME(std::begin(pname), std::end(pname)),
 				probability_type((i + 1u)->back().probability()) });
 
 			for(auto j(std::begin(*i)); j != std::end(*i); ++j) {
