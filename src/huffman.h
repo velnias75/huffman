@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <vector>
-#include <deque>
 
 namespace huffman {
 
@@ -202,7 +201,7 @@ private:
 	NODES build_nodes(const COLUMNS &t) {
 
 		NODES n;
-		std::size_t p = 0u;
+		typename COLUMNS::size_type p = 0u;
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
 			n.push_back(NODE { p, i->character(), probability_type(i->probability()), true });
@@ -218,8 +217,8 @@ private:
 	}
 
 private:
-	NODES m_nodes;
-	TREE  *m_tree;
+	const NODES m_nodes;
+	TREE *m_tree;
 };
 
 }
