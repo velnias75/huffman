@@ -133,6 +133,8 @@ public:
 
 		} while(bit <= nbits);
 
+		n.shrink_to_fit();
+
 		return n;
 	}
 
@@ -167,6 +169,8 @@ private:
 
 		COLUMNS c { COLUMN(std::begin(a), std::end(a)) };
 
+		c.reserve(a.size());
+
 		auto i(c.begin());
 
 		do {
@@ -178,6 +182,7 @@ private:
 			std::partial_sort_copy(std::begin(col), std::end(col), minima, minima + 2);
 
 			c.push_back(COLUMN());
+			c.back().reserve(col.size() - 1u);
 
 			std::copy_if(std::begin(col), std::end(col), std::back_inserter(c.back()),
 				[minima](const typename COLUMN::value_type& x)
@@ -187,9 +192,13 @@ private:
 			c.back().push_back(COLUMN_ENTRY(typename ALPHABET::value_type(
 				minima[0].probability() + minima[1].probability())));
 
+			c.back().shrink_to_fit();
+
 			i = --end(c);
 
 		} while(c.back().size() != 1u);
+
+		c.shrink_to_fit();
 
 		return c;
 	}
@@ -198,6 +207,8 @@ private:
 
 		NODES n;
 		typename COLUMNS::size_type p = 0u;
+
+		n.reserve((t.front().size() * 2u) - 1u);
 
 		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
 			n.push_back(NODE { p, probability_type(i->probability()), i->character(), true });
@@ -208,6 +219,8 @@ private:
 		}
 
 		std::sort(std::begin(n), std::end(n));
+
+		n.shrink_to_fit();
 
 		return n;
 	}
