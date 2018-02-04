@@ -1,8 +1,27 @@
+/*
+ * Copyright 2018 by Heiko Schäfer <heiko@rangun.de>
+ *
+ * This file is part of huffman.
+ *
+ * huffman is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * huffman is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with huffman.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef _HUFFMAN_H
 #define _HUFFMAN_H
 
 #include <algorithm>
-#include <vector>
+#include <queue>
 #include <map>
 
 namespace huffman {
@@ -19,7 +38,6 @@ public:
 	typedef std::vector<character_type> CSEQ;
 	typedef std::vector<bool> CODE;
 
-private:
 	typedef class _alphabet_entry {
 	public:
 		explicit _alphabet_entry(const probability_type& p) : m_character(0), m_probability(p) {}
@@ -40,74 +58,33 @@ private:
 		probability_type m_probability;
 	} ALPHABET_ENTRY;
 
-public:
 	typedef std::vector<ALPHABET_ENTRY> ALPHABET;
 	typedef typename ALPHABET::value_type value_type;
 
 private:
-	typedef class _column_entry {
+	typedef class _tree_node {
+
+		_tree_node(const _tree_node&);
+		_tree_node& operator=(const _tree_node&);
+
 	public:
-		typedef ALPHABET_ENTRY column_entry_type;
-
-		_column_entry() : m_entry(character_type(0), probability_type(0)) {}
-
-		explicit _column_entry(const column_entry_type& e) : m_entry(e) {}
-
-		character_type character() const {
-			return m_entry.character();
-		}
-
-		probability_type probability() const {
-			return m_entry.probability();
-		}
-
-		friend bool operator==(const _column_entry& a, const _column_entry& b) {
-			return a.character() == b.character();
-		}
-
-		friend bool operator<(const _column_entry& x, const _column_entry& y) {
-			return x.probability() < y.probability();
-		}
-
-	private:
-		column_entry_type m_entry;
-	} COLUMN_ENTRY;
-
-	typedef std::vector<COLUMN_ENTRY> COLUMN;
-
-	typedef struct _node {
+		_tree_node() : probability(0), name(0), leaf(true), left(0L), right(0L) {}
 
 		probability_type probability;
 		character_type name;
 		bool leaf;
 
-		friend bool operator==(const _node &x, const _node &y) {
-			return x.name == y.name && x.probability == y.probability && x.leaf == y.leaf;
-		}
-
-		friend bool operator<(const _node& x, const _node& y) {
-			return x.probability > y.probability;
-		}
-
-	} NODE;
-
-	typedef std::vector<COLUMN> COLUMNS;
-
-	typedef struct _tree_node {
-		_tree_node() : node(0L), left(0L), right(0L) {}
-		const NODE *node;
 		_tree_node *left;
 		_tree_node *right;
 	} TREE_NODE;
 
-	typedef std::vector<NODE> NODES;
 	typedef std::map<character_type, CODE> DICT;
 
 public:
 	typedef _tree_node TREE;
 
-	explicit huffman(const ALPHABET& a) : m_nodes(build_nodes(build_table(a))),
-		m_tree(build_tree(m_nodes)), m_dictionary(build_dictionary(a)) {}
+	explicit huffman(const ALPHABET& a) : m_tree(build_tree(a)),
+		m_dictionary(build_dictionary(a)) {}
 
 	~huffman() {
 		delete_tree(m_tree);
@@ -140,7 +117,7 @@ public:
 			p = bit ? p->right : p->left;
 
 			if(!(p->left || p->right)) {
-				n.push_back(p->node->name);
+				n.push_back(p->name);
 				p = m_tree;
 			}
 		}
@@ -163,7 +140,7 @@ private:
 
 		if(!n) return false;
 
-		if(n->node->name != c || !n->node->leaf) {
+		if(n->name != c || !n->leaf) {
 
 			if(n->left) {
 				code.push_back(false);
@@ -198,84 +175,42 @@ private:
 		return d;
 	}
 
-	TREE *build_tree(const NODES &n) {
+	struct _node_cmp {
+		constexpr bool operator()(const TREE_NODE *x, const TREE_NODE *y) const {
+			return x->probability > y->probability;
+		}
+	};
 
-		TREE *tp = new TREE(), *t = tp;
+	TREE *build_tree(const ALPHABET &n) {
 
-		tp->node = &n.front();
+		std::priority_queue<TREE_NODE *, std::vector<TREE_NODE *>, _node_cmp> pq;
 
-		for(auto i(std::begin(n) + 1u); i != std::end(n); ++i) {
-			tp->right = new TREE_NODE();
-			tp->right->node = &(*i);
-			tp->left  = new TREE_NODE();
-			tp->left->node = &(*(++i));
-			tp = tp->right->node->leaf ? tp->left : tp->right;
+		for(const ALPHABET_ENTRY &a : n) {
+			TREE_NODE *tn = new TREE_NODE();
+			tn->probability = a.probability();
+			tn->name = a.character();
+			pq.push(tn);
 		}
 
-		return t;
-	}
+		while(pq.size() > 1u) {
 
-	COLUMNS build_table(const ALPHABET& a) {
+			TREE_NODE *min1(pq.top());
+			pq.pop();
+			TREE_NODE *min2(pq.top());
+			pq.pop();
 
-		COLUMNS c { COLUMN(std::begin(a), std::end(a)) };
+			TREE_NODE *tn = new TREE_NODE();
+			tn->probability = min1->probability + min2->probability;
+			tn->left  = min1;
+			tn->right = min2;
 
-		c.reserve(a.size());
-
-		auto i(c.begin());
-
-		do {
-
-			auto col(*i);
-
-			typename COLUMN::value_type minima[2];
-
-			std::partial_sort_copy(std::begin(col), std::end(col), minima, minima + 2);
-
-			c.push_back(COLUMN());
-			c.back().reserve(col.size() - 1u);
-
-			std::copy_if(std::begin(col), std::end(col), std::back_inserter(c.back()),
-				[minima](const typename COLUMN::value_type& x)
-					{ return x.probability() != minima[0].probability() &&
-						 x.probability() != minima[1].probability(); });
-
-			c.back().push_back(COLUMN_ENTRY(typename ALPHABET::value_type(
-				minima[0].probability() + minima[1].probability())));
-
-			c.back().shrink_to_fit();
-
-			i = --end(c);
-
-		} while(c.back().size() != 1u);
-
-		c.shrink_to_fit();
-
-		return c;
-	}
-
-	static NODES build_nodes(const COLUMNS &t) {
-
-		NODES n;
-
-		n.reserve((t.front().size() * 2u) - 1u);
-
-		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i) {
-			n.push_back(NODE { probability_type(i->probability()), i->character(), true });
+			pq.push(tn);
 		}
 
-		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i) {
-			n.push_back(NODE { probability_type((i + 1u)->back().probability()), 0, false });
-		}
-
-		std::sort(std::begin(n), std::end(n));
-
-		n.shrink_to_fit();
-
-		return n;
+		return pq.top();
 	}
 
 private:
-	const NODES m_nodes;
 	TREE * const m_tree;
 	DICT   m_dictionary;
 };

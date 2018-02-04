@@ -11,8 +11,10 @@ AM_MAINTAINER_MODE
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
+PKG_PROG_PKG_CONFIG([0.22])
 
 # Checks for libraries.
+PKG_CHECK_MODULES([RATIONAL], [rational >= 2.7])
 
 # Checks for header files.
 AC_CHECK_HEADER_STDBOOL

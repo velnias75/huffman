@@ -1,36 +1,69 @@
-#include <cstdlib>
-#include <iterator>
+/*
+ * Copyright 2018 by Heiko Schäfer <heiko@rangun.de>
+ *
+ * This file is part of huffman.
+ *
+ * huffman is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * huffman is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with huffman.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <iostream>
+#include <iterator>
+#include <cstdlib>
 #include <numeric>
+
+#include <rational/rational.h>
 
 #include "huffman.h"
 
 int main(int, char **) {
 
-	typedef huffman::huffman<char, float> HUFFMAN;
+	typedef Commons::Math::Rational<unsigned long> PROBABILITY;
+	typedef huffman::huffman<char, PROBABILITY> HUFFMAN;
 
-	HUFFMAN vowellish({
-		HUFFMAN::value_type('A', 0.12),
-		HUFFMAN::value_type('E', 0.42),
-		HUFFMAN::value_type('I', 0.09),
-		HUFFMAN::value_type('O', 0.30),
-		HUFFMAN::value_type('U', 0.07)
-	});
+	HUFFMAN::ALPHABET alpha;
+	HUFFMAN::CSEQ    source;
 
-	HUFFMAN::CSEQ a { 'I', 'O', 'U' };
-	HUFFMAN::CODE c(vowellish.encode(a));
-	HUFFMAN::CSEQ n(vowellish.decode(c));
+	{
+		std::map<char, std::size_t> m;
+		std::size_t ms = 0u;
+		char i;
 
-	float ratio = (c.size() * 100u)/(n.size()*sizeof(HUFFMAN::character_type)*8u);
+		while((i = std::cin.get()) != std::istream::traits_type::eof()) {
 
-	std::cout << "Encoded \"";
-	std::copy(std::begin(a), std::end(a),
+			++m[i];
+			++ms;
+			source.push_back(i);
+		}
+
+		for(const auto& mi : m) {
+			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, PROBABILITY(1.0f, ms) * mi.second));
+		}
+	}
+
+	HUFFMAN huff(alpha);
+	HUFFMAN::CODE enc(huff.encode(source));
+
+	const float ratio = (enc.size() * 100u)/(source.size()*sizeof(HUFFMAN::character_type)*8u);
+
+	std::cout << "Encoded into " << enc.size() << " bits: " << ratio << "%" << std::endl;
+
+	HUFFMAN::CSEQ dec(huff.decode(enc));
+
+	std::cout << "Decoded: ";
+	std::copy(std::begin(dec), std::end(dec),
 		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
-	std::cout << "\" (" << (n.size()*sizeof(HUFFMAN::character_type)*8u)
-		<< " bits) into " << c.size() << " bits and then decoded: \"";
-	std::copy(std::begin(n), std::end(n),
-		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
-	std::cout << "\" (ratio: " << ratio << "%)" << std::endl;
+	std::cout << std::endl;
 
 	return EXIT_SUCCESS;
 }
