@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <map>
 
 namespace huffman {
 
@@ -19,7 +20,6 @@ public:
 	typedef std::vector<bool> CODE;
 
 private:
-
 	typedef class _alphabet_entry {
 	public:
 		explicit _alphabet_entry(const probability_type& p) : m_character(0), m_probability(p) {}
@@ -82,7 +82,7 @@ private:
 		bool leaf;
 
 		friend bool operator==(const _node &x, const _node &y) {
-			return x.name == y.name && x.probability == x.probability && x.leaf == x.leaf;
+			return x.name == y.name && x.probability == y.probability && x.leaf == y.leaf;
 		}
 
 		friend bool operator<(const _node& x, const _node& y) {
@@ -101,12 +101,13 @@ private:
 	} TREE_NODE;
 
 	typedef std::vector<NODE> NODES;
+	typedef std::map<character_type, CODE> DICT;
 
 public:
 	typedef _tree_node TREE;
 
 	explicit huffman(const ALPHABET& a) : m_nodes(build_nodes(build_table(a))),
-		m_tree(build_tree(m_nodes)) {}
+		m_tree(build_tree(m_nodes)), m_dictionary(build_dictionary(a)) {}
 
 	~huffman() {
 		delete_tree(m_tree);
@@ -118,7 +119,12 @@ public:
 		code.reserve(4096u);
 
 		for(const typename CSEQ::value_type &i : n) {
-			if(!lookup(i, code, m_tree)) break;
+
+			const auto &r(m_dictionary.find(i));
+
+			if(r != std::end(m_dictionary)) {
+				code.insert(std::end(code), std::begin(r->second), std::end(r->second));
+			} else break;
 		}
 
 		return code;
@@ -174,6 +180,22 @@ private:
 		} else return true;
 
 		return false;
+	}
+
+	DICT build_dictionary(const ALPHABET& a) {
+
+		DICT d;
+
+		for(const ALPHABET_ENTRY &c : a) {
+
+			CODE code;
+
+			if(lookup(c.character(), code, m_tree)) {
+				d.insert(std::make_pair(c.character(), code));
+			}
+		}
+
+		return d;
 	}
 
 	TREE *build_tree(const NODES &n) {
@@ -255,6 +277,7 @@ private:
 private:
 	const NODES m_nodes;
 	TREE * const m_tree;
+	DICT   m_dictionary;
 };
 
 }

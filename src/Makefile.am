@@ -1,4 +1,4 @@
-bin_PROGRAMS = huffman
+noinst_PROGRAMS = huffman
 
 pkginclude_HEADERS = huffman.h
 huffman_SOURCES = main.cpp
