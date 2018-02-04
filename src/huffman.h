@@ -21,7 +21,6 @@ private:
 
 	typedef class _alphabet_entry {
 	public:
-
 		explicit _alphabet_entry(const probability_type& p) : m_character(0), m_probability(p) {}
 
 		_alphabet_entry(const character_type& c, const probability_type& p)
@@ -47,7 +46,6 @@ public:
 private:
 	typedef class _column_entry {
 	public:
-
 		typedef ALPHABET_ENTRY column_entry_type;
 
 		_column_entry() : m_entry(character_type(0), probability_type(0)) {}
@@ -114,6 +112,18 @@ public:
 		delete_tree(m_tree);
 	}
 
+	std::vector<bool> encode(const CSEQ &n) const {
+
+		std::vector<bool> code;
+		code.reserve(4096u);
+
+		for(const typename CSEQ::value_type &i : n) {
+			if(!lookup(i, code, m_tree)) break;
+		}
+
+		return code;
+	}
+
 	CSEQ decode(unsigned int c, std::size_t nbits) const {
 
 		CSEQ n;
@@ -139,13 +149,35 @@ public:
 	}
 
 private:
-
 	void delete_tree(_tree_node *n) {
 
 		if(n->left) delete_tree(n->left);
 		if(n->right) delete_tree(n->right);
 
 		delete n;
+	}
+
+	bool lookup(const character_type& c, std::vector<bool> &code, _tree_node *n) const {
+
+		if(!n) return false;
+
+		if(n->node->name != c || !n->node->leaf) {
+
+			if(n->left) {
+				code.push_back(false);
+				if(lookup(c, code, n->left)) return true;
+			}
+
+			if(n->right) {
+				code.push_back(true);
+				if(lookup(c, code, n->right)) return true;
+			}
+
+			code.pop_back();
+
+		} else return true;
+
+		return false;
 	}
 
 	TREE *build_tree(const NODES &n) {

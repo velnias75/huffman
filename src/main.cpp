@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <iostream>
+#include <numeric>
 
 #include "huffman.h"
 
@@ -16,7 +17,16 @@ int main(int, char **) {
 		HUFFMAN::value_type('U', 0.07)
 	});
 
-	HUFFMAN::CSEQ n(vowellish.decode(762u, 10u));
+	std::vector<bool> code(vowellish.encode(HUFFMAN::CSEQ { 'I', 'O', 'U' }));
+
+	unsigned int x;
+
+	std::cout << "Encoded: " <<
+		(x = std::accumulate(std::begin(code), std::end(code), 0u,
+			[](unsigned int x, unsigned int y) { return (x << 1u) + y; }))
+		<< " (" << code.size() <<" bits)" << std::endl;
+
+	HUFFMAN::CSEQ n(vowellish.decode(x, code.size()));
 
 	std::cout << "Decoded: ";
 	std::copy(std::begin(n), std::end(n),
