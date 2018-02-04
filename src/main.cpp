@@ -17,21 +17,20 @@ int main(int, char **) {
 		HUFFMAN::value_type('U', 0.07)
 	});
 
-	std::vector<bool> code(vowellish.encode(HUFFMAN::CSEQ { 'I', 'O', 'U' }));
+	HUFFMAN::CSEQ a { 'I', 'O', 'U' };
+	HUFFMAN::CODE c(vowellish.encode(a));
+	HUFFMAN::CSEQ n(vowellish.decode(c));
 
-	unsigned int x;
+	float ratio = (c.size() * 100u)/(n.size()*sizeof(HUFFMAN::character_type)*8u);
 
-	std::cout << "Encoded: " <<
-		(x = std::accumulate(std::begin(code), std::end(code), 0u,
-			[](unsigned int x, unsigned int y) { return (x << 1u) + y; }))
-		<< " (" << code.size() <<" bits)" << std::endl;
-
-	HUFFMAN::CSEQ n(vowellish.decode(x, code.size()));
-
-	std::cout << "Decoded: ";
+	std::cout << "Encoded \"";
+	std::copy(std::begin(a), std::end(a),
+		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
+	std::cout << "\" (" << (n.size()*sizeof(HUFFMAN::character_type)*8u)
+		<< " bits) into " << c.size() << " bits and then decoded: \"";
 	std::copy(std::begin(n), std::end(n),
 		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
-	std::cout << std::endl;
+	std::cout << "\" (ratio: " << ratio << "%)" << std::endl;
 
 	return EXIT_SUCCESS;
 }

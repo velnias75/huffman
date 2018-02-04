@@ -16,6 +16,7 @@ public:
 	typedef C character_type;
 	typedef P probability_type;
 	typedef std::vector<character_type> CSEQ;
+	typedef std::vector<bool> CODE;
 
 private:
 
@@ -76,13 +77,12 @@ private:
 
 	typedef struct _node {
 
-		typename std::vector<_node>::size_type row;
 		probability_type probability;
 		character_type name;
 		bool leaf;
 
 		friend bool operator==(const _node &x, const _node &y) {
-			return x.row == y.row;
+			return x.name == y.name && x.probability == x.probability && x.leaf == x.leaf;
 		}
 
 		friend bool operator<(const _node& x, const _node& y) {
@@ -112,9 +112,9 @@ public:
 		delete_tree(m_tree);
 	}
 
-	std::vector<bool> encode(const CSEQ &n) const {
+	CODE encode(const CSEQ &n) const {
 
-		std::vector<bool> code;
+		CODE code;
 		code.reserve(4096u);
 
 		for(const typename CSEQ::value_type &i : n) {
@@ -124,24 +124,20 @@ public:
 		return code;
 	}
 
-	CSEQ decode(unsigned int c, std::size_t nbits) const {
+	CSEQ decode(const CODE &c) const {
 
 		CSEQ n;
-		std::size_t bit(1);
 		const TREE *p = m_tree;
 
-		do {
+		for(bool bit : c) {
 
-			p = !!(c & (1 << bit)) ? p->right : p->left;
+			p = bit ? p->right : p->left;
 
 			if(!(p->left || p->right)) {
 				n.push_back(p->node->name);
 				p = m_tree;
 			}
-
-			++bit;
-
-		} while(bit <= nbits);
+		}
 
 		n.shrink_to_fit();
 
@@ -157,7 +153,7 @@ private:
 		delete n;
 	}
 
-	bool lookup(const character_type& c, std::vector<bool> &code, _tree_node *n) const {
+	bool lookup(const character_type& c, CODE &code, _tree_node *n) const {
 
 		if(!n) return false;
 
@@ -238,16 +234,15 @@ private:
 	static NODES build_nodes(const COLUMNS &t) {
 
 		NODES n;
-		typename COLUMNS::size_type p = 0u;
 
 		n.reserve((t.front().size() * 2u) - 1u);
 
-		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i, ++p) {
-			n.push_back(NODE { p, probability_type(i->probability()), i->character(), true });
+		for(auto i(std::begin(t.front())); i != std::end(t.front()); ++i) {
+			n.push_back(NODE { probability_type(i->probability()), i->character(), true });
 		}
 
-		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i, ++p) {
-			n.push_back(NODE { p, probability_type((i + 1u)->back().probability()), 0, false });
+		for(auto i(std::begin(t)); i != std::end(t) - 1u; ++i) {
+			n.push_back(NODE { probability_type((i + 1u)->back().probability()), 0, false });
 		}
 
 		std::sort(std::begin(n), std::end(n));
