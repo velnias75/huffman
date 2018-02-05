@@ -71,9 +71,11 @@ int main(int, char **) {
 	HUFFMAN huff(alpha);
 	HUFFMAN::CODE enc(huff.encode(source));
 
-	const float ratio = (enc.size() * 100u)/(source.size()*sizeof(HUFFMAN::character_type)*8u);
+	const float ratio =
+		float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u);
 
-	std::cout << "Encoded into " << enc.size() << " bits: " << ratio << "%" << std::endl;
+	std::cout << "Encoded into " << enc.size() << " bits: "
+		<< std::defaultfloat << ratio << "%" << std::endl;
 
 	HUFFMAN::CSEQ dec(huff.decode(enc));
 
