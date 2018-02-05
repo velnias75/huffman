@@ -22,13 +22,24 @@
 #include <cstdlib>
 #include <numeric>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_RATIONAL_H
 #include <rational/rational.h>
+#endif
 
 #include "huffman.h"
 
 int main(int, char **) {
 
+#ifdef HAVE_RATIONAL_H
 	typedef Commons::Math::Rational<unsigned long> PROBABILITY;
+#else
+	typedef float PROBABILITY;
+#endif
+
 	typedef huffman::huffman<char, PROBABILITY> HUFFMAN;
 
 	HUFFMAN::ALPHABET alpha;
@@ -46,8 +57,14 @@ int main(int, char **) {
 			source.push_back(i);
 		}
 
+#ifdef HAVE_RATIONAL_H
+		const PROBABILITY pf(1ul, ms);
+#else
+		const PROBABILITY pf(1.0f/ms);
+#endif
+
 		for(const auto& mi : m) {
-			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, PROBABILITY(1.0f, ms) * mi.second));
+			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * mi.second));
 		}
 	}
 

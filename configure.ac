@@ -14,7 +14,7 @@ AC_PROG_CC
 PKG_PROG_PKG_CONFIG([0.22])
 
 # Checks for libraries.
-PKG_CHECK_MODULES([RATIONAL], [rational >= 2.7])
+PKG_CHECK_MODULES([RATIONAL], [rational >= 2.7], [ AC_DEFINE([HAVE_RATIONAL_H], [1], [Define to 1 if you have the <rational/rational.h> header file.]) ], [ true ])
 
 # Checks for header files.
 AC_CHECK_HEADER_STDBOOL
