@@ -64,7 +64,7 @@ int main(int, char **) {
 #endif
 
 		for(const auto& mi : m) {
-			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * mi.second));
+			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * PROBABILITY(mi.second)));
 		}
 	}
 
