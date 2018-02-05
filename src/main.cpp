@@ -40,21 +40,20 @@ int main(int, char **) {
 	typedef float PROBABILITY;
 #endif
 
-	typedef huffman::huffman<char, PROBABILITY> HUFFMAN;
+	typedef huffman::huffman<char, PROBABILITY, std::vector<unsigned char>> HUFFMAN;
 
 	HUFFMAN::ALPHABET alpha;
 	HUFFMAN::CSEQ    source;
 
 	{
-		std::map<char, std::size_t> m;
+		std::unordered_map<char, std::size_t> m;
 		std::size_t ms = 0u;
 		char i;
 
-		while((i = std::cin.get()) != std::istream::traits_type::eof()) {
-
+		while(!std::cin.read(&i, 1).eof()) {
 			++m[i];
 			++ms;
-			source.push_back(i);
+			source.emplace_back(i);
 		}
 
 #ifdef HAVE_RATIONAL_H
@@ -64,18 +63,25 @@ int main(int, char **) {
 #endif
 
 		for(const auto& mi : m) {
-			alpha.push_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * PROBABILITY(mi.second)));
+			alpha.emplace_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * PROBABILITY(mi.second)));
 		}
 	}
 
 	HUFFMAN huff(alpha);
 	HUFFMAN::CODE enc(huff.encode(source));
 
-	const float ratio =
-		float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u);
-
-	std::cout << "Encoded into " << enc.size() << " bits: "
-		<< std::defaultfloat << ratio << "%" << std::endl;
+	std::cerr << "Encoded into " << enc.size() << " bits: "
+		<< std::defaultfloat
+		<< (float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u))
+		<< "%" << std::endl;
+	std::cerr << "Dictionary has " << huff.dictionary().size() <<
+		" entries with an average code of " << std::defaultfloat
+		<< ((float)std::accumulate(std::begin(huff.dictionary()), std::end(huff.dictionary()),
+				HUFFMAN::DICT::mapped_type::size_type(0),
+				[](const HUFFMAN::DICT::mapped_type::size_type &a,
+					const HUFFMAN::DICT::value_type &b)
+						{ return a + b.second.size(); })/(float)huff.dictionary().size())
+		<< " bits." << std::endl;
 
 	HUFFMAN::CSEQ dec(huff.decode(enc));
 

@@ -20,13 +20,13 @@
 #ifndef _HUFFMAN_H
 #define _HUFFMAN_H
 
+#include <unordered_map>
 #include <algorithm>
 #include <queue>
-#include <map>
 
 namespace huffman {
 
-template<class C, class P = double>
+template<class C, class P = double, class BitSeq = std::vector<bool>>
 class huffman {
 
 	huffman(const huffman&);
@@ -35,8 +35,9 @@ class huffman {
 public:
 	typedef C character_type;
 	typedef P probability_type;
+	typedef BitSeq bitsequence_type;
 	typedef std::vector<character_type> CSEQ;
-	typedef std::vector<bool> CODE;
+	typedef bitsequence_type CODE;
 
 	typedef class _alphabet_entry {
 	public:
@@ -45,17 +46,17 @@ public:
 		_alphabet_entry(const character_type& c, const probability_type& p)
 			: m_character(c), m_probability(p) {}
 
-		character_type character() const {
+		const character_type &character() const {
 			return m_character;
 		}
 
-		probability_type probability() const {
+		const probability_type &probability() const {
 			return m_probability;
 		}
 
 	private:
-		character_type m_character;
-		probability_type m_probability;
+		const character_type m_character;
+		const probability_type m_probability;
 	} ALPHABET_ENTRY;
 
 	typedef std::vector<ALPHABET_ENTRY> ALPHABET;
@@ -68,19 +69,43 @@ private:
 		_tree_node& operator=(const _tree_node&);
 
 	public:
-		_tree_node() : probability(0), name(0), leaf(true), left(0L), right(0L) {}
+		_tree_node() : m_probability(0), m_name(0), m_leaf(true), m_left(0L), m_right(0L) {}
+		_tree_node(const probability_type& p, _tree_node *l, _tree_node *r) : m_probability(p),
+			m_name(0), m_leaf(false), m_left(l), m_right(r) {}
+		_tree_node(const probability_type& p, const character_type &c) : m_probability(p),
+			m_name(c), m_leaf(true), m_left(0L), m_right(0L) {}
 
-		probability_type probability;
-		character_type name;
-		bool leaf;
+		const probability_type &probability() const {
+			return m_probability;
+		}
 
-		_tree_node *left;
-		_tree_node *right;
+		const character_type &name() const {
+			return m_name;
+		}
+
+		bool leaf() const {
+			return m_leaf;
+		}
+
+		_tree_node * left() const {
+			return m_left;
+		}
+
+		_tree_node *right() const {
+			return m_right;
+		}
+
+	private:
+		const probability_type m_probability;
+		const character_type m_name;
+		const bool m_leaf;
+
+		_tree_node * const m_left;
+		_tree_node * const m_right;
 	} TREE_NODE;
 
-	typedef std::map<character_type, CODE> DICT;
-
 public:
+	typedef std::unordered_map<character_type, CODE> DICT;
 	typedef _tree_node TREE;
 
 	explicit huffman(const ALPHABET& a) : m_tree(build_tree(a)),
@@ -98,9 +123,10 @@ public:
 		for(const typename CSEQ::value_type &i : n) {
 
 			const auto &r(m_dictionary.find(i));
+			const auto &bits(r->second);
 
 			if(r != std::end(m_dictionary)) {
-				code.insert(std::end(code), std::begin(r->second), std::end(r->second));
+				for(const auto &bit : bits) code.emplace_back(bit);
 			} else break;
 		}
 
@@ -114,10 +140,10 @@ public:
 
 		for(bool bit : c) {
 
-			p = bit ? p->right : p->left;
+			p = bit ? p->right() : p->left();
 
-			if(!(p->left || p->right)) {
-				n.push_back(p->name);
+			if(!(p->left() || p->right())) {
+				n.emplace_back(p->name());
 				p = m_tree;
 			}
 		}
@@ -127,11 +153,15 @@ public:
 		return n;
 	}
 
+	DICT dictionary() const {
+		return m_dictionary;
+	}
+
 private:
 	void delete_tree(_tree_node *n) {
 
-		if(n->left) delete_tree(n->left);
-		if(n->right) delete_tree(n->right);
+		if(n->left()) delete_tree(n->left());
+		if(n->right()) delete_tree(n->right());
 
 		delete n;
 	}
@@ -140,16 +170,16 @@ private:
 
 		if(!n) return false;
 
-		if(n->name != c || !n->leaf) {
+		if(!n->leaf() || n->name() != c) {
 
-			if(n->left) {
-				code.push_back(false);
-				if(lookup(c, code, n->left)) return true;
+			if(n->left()) {
+				code.emplace_back(false);
+				if(lookup(c, code, n->left())) return true;
 			}
 
-			if(n->right) {
-				code.push_back(true);
-				if(lookup(c, code, n->right)) return true;
+			if(n->right()) {
+				code.emplace_back(true);
+				if(lookup(c, code, n->right())) return true;
 			}
 
 			code.pop_back();
@@ -168,7 +198,7 @@ private:
 			CODE code;
 
 			if(lookup(c.character(), code, m_tree)) {
-				d.insert(std::make_pair(c.character(), code));
+				d.emplace(std::make_pair(c.character(), code));
 			}
 		}
 
@@ -177,7 +207,7 @@ private:
 
 	struct _node_cmp {
 		constexpr bool operator()(const TREE_NODE *x, const TREE_NODE *y) const {
-			return x->probability > y->probability;
+			return x->probability() > y->probability();
 		}
 	};
 
@@ -186,25 +216,20 @@ private:
 		std::priority_queue<TREE_NODE *, std::vector<TREE_NODE *>, _node_cmp> pq;
 
 		for(const ALPHABET_ENTRY &a : n) {
-			TREE_NODE *tn = new TREE_NODE();
-			tn->probability = a.probability();
-			tn->name = a.character();
-			pq.push(tn);
+			pq.push(new TREE_NODE(a.probability(), a.character()));
 		}
 
 		while(pq.size() > 1u) {
 
-			TREE_NODE *min1(pq.top());
-			pq.pop();
-			TREE_NODE *min2(pq.top());
+			TREE_NODE *min[2];
+
+			min[0] = pq.top();
 			pq.pop();
 
-			TREE_NODE *tn = new TREE_NODE();
-			tn->probability = min1->probability + min2->probability;
-			tn->left  = min1;
-			tn->right = min2;
+			min[1] = pq.top();
+			pq.pop();
 
-			pq.push(tn);
+			pq.push(new TREE_NODE(min[0]->probability() + min[1]->probability(), min[0], min[1]));
 		}
 
 		return pq.top();
