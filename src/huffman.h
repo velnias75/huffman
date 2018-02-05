@@ -115,7 +115,8 @@ public:
 		delete_tree(m_tree);
 	}
 
-	CODE encode(const typename CSEQ::iterator &b, const typename CSEQ::iterator &e) const {
+	template<class IIter>
+	CODE encode(IIter b, IIter e) const {
 
 		CODE code;
 		code.reserve(4096u);
@@ -133,14 +134,15 @@ public:
 		return code;
 	}
 
-	CSEQ decode(const CODE &c) const {
+	template<class IIter>
+	CSEQ decode(IIter b, IIter e) const {
 
 		CSEQ n;
 		const TREE *p = m_tree;
 
-		for(bool bit : c) {
+		for(auto it(b); it != e; ++it) {
 
-			p = bit ? p->right() : p->left();
+			p = *it ? p->right() : p->left();
 
 			if(!(p->left() || p->right())) {
 				n.emplace_back(p->name());

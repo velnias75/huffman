@@ -49,29 +49,29 @@ std::string nodeLabel(const HUFFMAN::TREE * const n) {
 		nor << "\'" << (n->name() == '\"' ? "\\\"" : std::string(1, n->name())) << "\'";
 		os << " [label=\"" << (std::isprint(n->name()) ? nor.str() : hex.str())
 			<< " (" << std::defaultfloat << n->probability()
-				<< ")\",shape=ellipse,style=filled,fillcolor=darkolivegreen,fontcolor=white]";
+				<< ")\",shape=ellipse,style=filled,fillcolor=darkolivegreen,fontcolor=beige]";
 	} else {
 		os << " [label=\"" << std::defaultfloat << n->probability()
-			<< "\",shape=box,style=filled,fillcolor=beige]";
+			<< "\",shape=box,style=filled,fillcolor=beige,fontcolor=darkolivegreen]";
 	}
 
 	return os.str();
 }
 
-void tree2dot(const HUFFMAN::TREE * const n) {
+void tree2dot(const HUFFMAN::TREE * const n, const std::string &l) {
 
 	if(n->left()) {
 		std::cout << "N" << std::hex << n->left() << nodeLabel(n->left()) << ";" << std::endl;
 		std::cout << "N" << std::hex << n << " -> " << "N" << n->left()
-			<< "[label=0,fontcolor=red,labeldistance=3];" << std::endl;
-		tree2dot(n->left());
+			<< "[label=\"" << (l + "0") << "\",fontcolor=red,labeldistance=3];" << std::endl;
+		tree2dot(n->left(), l + "0");
 	}
 
 	if(n->right()) {
 		std::cout << "N" << std::hex << n->right() << nodeLabel(n->right()) << ";" << std::endl;
 		std::cout << "N" << std::hex << n << " -> " << "N" << n->right()
-			<< "[label=1,fontcolor=blue,labeldistance=3];" << std::endl;
-		tree2dot(n->right());
+			<< "[label=\"" << (l + "1") << "\",fontcolor=blue,labeldistance=3];" << std::endl;
+		tree2dot(n->right(), l + "1");
 	}
 }
 
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
 							{ return a + b.second.size(); })/(float)huff.dictionary().size())
 			<< " bits." << std::endl;
 
-		HUFFMAN::CSEQ dec(huff.decode(enc));
+		HUFFMAN::CSEQ dec(huff.decode(std::begin(enc), std::end(enc)));
 
 		std::cout << "Decoded: ";
 		std::copy(std::begin(dec), std::end(dec),
@@ -131,9 +131,13 @@ int main(int argc, char **argv) {
 	} else if(std::string(argv[1]) == "-t") {
 		std::cout << "digraph {" << std::endl;
 		std::cout << "fontname=\"Courier\"; fontnames=\"ps\"; rank=same; " <<
-			"rankdir=RL; center=true; splines=false;" << std::endl;
+			"rankdir=RL; center=true; splines=false; label=\"Huffman-tree for: \\\"";
+		std::copy(std::begin(source),
+			source.size() > 55 ? std::begin(source) + 55 : std::end(source),
+			std::ostream_iterator<HUFFMAN::character_type>(std::cout));
+		std::cout << "\\\"" << (source.size() > 55 ? "..." : "") <<  "\"" << std::endl;
 		std::cout << "\nN" << std::hex << huff.tree() << nodeLabel(huff.tree()) << ";" << std::endl;
-		tree2dot(huff.tree());
+		tree2dot(huff.tree(), "");
 		std::cout << "}" << std::endl;
 
 	} else {
