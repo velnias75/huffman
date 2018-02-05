@@ -32,15 +32,50 @@
 
 #include "huffman.h"
 
-int main(int, char **) {
-
 #ifdef HAVE_RATIONAL_H
-	typedef Commons::Math::Rational<unsigned long> PROBABILITY;
+typedef Commons::Math::Rational<unsigned long> PROBABILITY;
 #else
-	typedef float PROBABILITY;
+typedef float PROBABILITY;
 #endif
 
-	typedef huffman::huffman<char, PROBABILITY, std::vector<unsigned char>> HUFFMAN;
+typedef huffman::huffman<char, PROBABILITY, std::vector<unsigned char>> HUFFMAN;
+
+std::string nodeLabel(const HUFFMAN::TREE * const n) {
+
+	std::ostringstream os, hex, nor;
+
+	if(n->leaf()) {
+		hex << "0x" << std::hex << (((uint16_t)n->name()) & 0xff);
+		nor << "\'" << (n->name() == '\"' ? "\\\"" : std::string(1, n->name())) << "\'";
+		os << " [label=\"" << (std::isprint(n->name()) ? nor.str() : hex.str())
+			<< " (" << std::defaultfloat << n->probability()
+				<< ")\",shape=ellipse,style=filled,fillcolor=darkolivegreen,fontcolor=white]";
+	} else {
+		os << " [label=\"" << std::defaultfloat << n->probability()
+			<< "\",shape=box,style=filled,fillcolor=beige]";
+	}
+
+	return os.str();
+}
+
+void tree2dot(const HUFFMAN::TREE * const n) {
+
+	if(n->left()) {
+		std::cout << "N" << std::hex << n->left() << nodeLabel(n->left()) << ";" << std::endl;
+		std::cout << "N" << std::hex << n << " -> " << "N" << n->left()
+			<< "[label=0,fontcolor=red,labeldistance=3];" << std::endl;
+		tree2dot(n->left());
+	}
+
+	if(n->right()) {
+		std::cout << "N" << std::hex << n->right() << nodeLabel(n->right()) << ";" << std::endl;
+		std::cout << "N" << std::hex << n << " -> " << "N" << n->right()
+			<< "[label=1,fontcolor=blue,labeldistance=3];" << std::endl;
+		tree2dot(n->right());
+	}
+}
+
+int main(int argc, char **argv) {
 
 	HUFFMAN::ALPHABET alpha;
 	HUFFMAN::CSEQ    source;
@@ -68,27 +103,42 @@ int main(int, char **) {
 	}
 
 	HUFFMAN huff(alpha);
-	HUFFMAN::CODE enc(huff.encode(source));
 
-	std::cerr << "Encoded into " << enc.size() << " bits: "
-		<< std::defaultfloat
-		<< (float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u))
-		<< "%" << std::endl;
-	std::cerr << "Dictionary has " << huff.dictionary().size() <<
-		" entries with an average code of " << std::defaultfloat
-		<< ((float)std::accumulate(std::begin(huff.dictionary()), std::end(huff.dictionary()),
-				HUFFMAN::DICT::mapped_type::size_type(0),
-				[](const HUFFMAN::DICT::mapped_type::size_type &a,
-					const HUFFMAN::DICT::value_type &b)
-						{ return a + b.second.size(); })/(float)huff.dictionary().size())
-		<< " bits." << std::endl;
+	if(argc != 2) {
 
-	HUFFMAN::CSEQ dec(huff.decode(enc));
+		HUFFMAN::CODE enc(huff.encode(std::begin(source), std::end(source)));
 
-	std::cout << "Decoded: ";
-	std::copy(std::begin(dec), std::end(dec),
-		std::ostream_iterator<HUFFMAN::character_type>(std::cout));
-	std::cout << std::endl;
+		std::cerr << "Encoded into " << enc.size() << " bits: "
+			<< std::defaultfloat
+			<< (float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u))
+			<< "%" << std::endl;
+		std::cerr << "Dictionary has " << huff.dictionary().size() <<
+			" entries with an average code of " << std::defaultfloat
+			<< ((float)std::accumulate(std::begin(huff.dictionary()), std::end(huff.dictionary()),
+					HUFFMAN::DICT::mapped_type::size_type(0),
+					[](const HUFFMAN::DICT::mapped_type::size_type &a,
+						const HUFFMAN::DICT::value_type &b)
+							{ return a + b.second.size(); })/(float)huff.dictionary().size())
+			<< " bits." << std::endl;
+
+		HUFFMAN::CSEQ dec(huff.decode(enc));
+
+		std::cout << "Decoded: ";
+		std::copy(std::begin(dec), std::end(dec),
+			std::ostream_iterator<HUFFMAN::character_type>(std::cout));
+		std::cout << std::endl;
+
+	} else if(std::string(argv[1]) == "-t") {
+		std::cout << "digraph {" << std::endl;
+		std::cout << "fontname=\"Courier\"; fontnames=\"ps\"; rank=same; " <<
+			"rankdir=RL; center=true; splines=false;" << std::endl;
+		std::cout << "\nN" << std::hex << huff.tree() << nodeLabel(huff.tree()) << ";" << std::endl;
+		tree2dot(huff.tree());
+		std::cout << "}" << std::endl;
+
+	} else {
+		std::cerr << "unknown option" << std::endl;
+	}
 
 	return EXIT_SUCCESS;
 }

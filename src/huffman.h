@@ -115,14 +115,14 @@ public:
 		delete_tree(m_tree);
 	}
 
-	CODE encode(const CSEQ &n) const {
+	CODE encode(const typename CSEQ::iterator &b, const typename CSEQ::iterator &e) const {
 
 		CODE code;
 		code.reserve(4096u);
 
-		for(const typename CSEQ::value_type &i : n) {
+		for(auto it(b); it != e; ++it) {
 
-			const auto &r(m_dictionary.find(i));
+			const auto &r(m_dictionary.find(*it));
 			const auto &bits(r->second);
 
 			if(r != std::end(m_dictionary)) {
@@ -155,6 +155,10 @@ public:
 
 	DICT dictionary() const {
 		return m_dictionary;
+	}
+
+	const TREE *tree() const {
+		return m_tree;
 	}
 
 private:
