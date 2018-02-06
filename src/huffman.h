@@ -26,15 +26,15 @@
 
 namespace huffman {
 
-template<class C, class P = double, class BitSeq = std::vector<bool>>
+template<class CharType, class PropType = double, class BitSeq = std::vector<bool>>
 class huffman {
 
 	huffman(const huffman&);
 	huffman& operator=(const huffman&);
 
 public:
-	typedef C character_type;
-	typedef P probability_type;
+	typedef CharType character_type;
+	typedef PropType probability_type;
 	typedef BitSeq bitsequence_type;
 	typedef std::vector<character_type> CSEQ;
 	typedef bitsequence_type CODE;
