@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([huffman], [0.1], [heiko@rangun.de])
+AC_INIT([huffman], [0.1], [heiko@rangun.de], , [https://github.com/velnias75/huffman])
 AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([foreign dist-xz no-dist-gzip])
