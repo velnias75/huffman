@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <fstream>
 
 #include "hufflib.h"
 
@@ -57,22 +58,36 @@ static void tree2dot(const HUFFMAN::TREE * const n, const std::string &l) {
 	}
 }
 
-int main(int, char **) {
+int main(int argc, char **argv) {
 
 	HUFFMAN::ALPHABET alpha;
 	HUFFMAN::CSEQ    source;
 
 	{
+		std::istream *in;
+
+		const bool isFile(argc == 2 && argv[1][0] != '-');
+
+		if(isFile) {
+			in = new std::ifstream(argv[1], std::ios::in|std::ios::binary);
+		} else {
+			in = &std::cin;
+		}
+
 		std::unordered_map<char, std::size_t> m;
 		std::size_t ms = 0u;
 		char i;
 
-		while(!std::cin.read(&i, 1).eof()) {
+		while(!in->read(&i, 1).eof()) {
 			++m[i];
 
 			if(ms < 56u) source.emplace_back(i);
 
 			++ms;
+		}
+
+		if(isFile) {
+			delete in;
 		}
 
 #ifdef HAVE_RATIONAL_H
