@@ -29,9 +29,14 @@ int main(int argc, char **argv) {
 		argc == 2 && argv[1][0] != '-'));
 
 	HUFFMAN::CODE enc(huff.encode(std::begin(source), std::end(source)));
+	huffman::HEADER header;
 
-	std::vector<uint8_t> dst;
-	dst.reserve((enc.size()/8u) + 1u);
+	header.dict_entries = huff.dictionary().size();
+	header.dict_entry_size = 8u + ((huff.tree()->height() % 8u) ?
+		huff.tree()->height() + (8u - huff.tree()->height() % 8u) :
+		huff.tree()->height());
+
+	std::cout.write(reinterpret_cast<char *>(&header), sizeof(huffman::HEADER));
 
 	uint8_t     c = 0u;
 	std::size_t b = 0u;
@@ -44,16 +49,15 @@ int main(int argc, char **argv) {
 
 		if(b > 7u) {
 
-			dst.push_back(c);
+			std::cout.put(c);
 
 			b = 0u;
 			c = 0u;
 		}
 	}
 
-	if(b < 8u) dst.push_back(c);
+	if(b < 8u) std::cout.put(c);
 
-	std::for_each(std::begin(dst), std::end(dst), [](uint8_t x) -> void { std::cout.put(x); });
 	std::cout.flush();
 
 	return EXIT_SUCCESS;
