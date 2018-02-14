@@ -17,37 +17,44 @@
  * along with huffman.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _HUFFLIB_H
-#define _HUFFLIB_H
+#include <iostream>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "hufflib.h"
 
-#ifdef HAVE_RATIONAL_H
-#include <rational/rational.h>
-#endif
+int main(int argc, char **argv) {
 
-#include "huffman.h"
+	HUFFMAN::CSEQ source;
 
-#ifdef HAVE_RATIONAL_H
-typedef Commons::Math::Rational<unsigned long> PROBABILITY;
+	const HUFFMAN huff(huffman::huffread(source, argc == 2 ? argv[1] : "",
+		argc == 2 && argv[1][0] != '-'));
 
-extern template class Commons::Math::Rational<unsigned long>;
+	HUFFMAN::CODE enc(huff.encode(std::begin(source), std::end(source)));
 
-#else
-typedef float PROBABILITY;
-#endif
+	std::vector<uint8_t> dst;
+	dst.reserve((enc.size()/8u) + 1u);
 
-extern template class huffman::huffman<char, PROBABILITY, std::vector<uint_fast8_t>>;
+	uint8_t     c = 0u;
+	std::size_t b = 0u;
 
-typedef huffman::huffman<char, PROBABILITY, std::vector<uint_fast8_t>> HUFFMAN;
+	for(auto i : enc) {
 
-namespace huffman {
+		if(i) c |= 1u << b;
 
-HUFFMAN huffread(HUFFMAN::CSEQ &source, const std::string &fname, bool isFile,
-	std::size_t max = 0u);
+		++b;
 
+		if(b > 7u) {
+
+			dst.push_back(c);
+
+			b = 0u;
+			c = 0u;
+		}
+	}
+
+	if(b < 8u) dst.push_back(c);
+
+	std::for_each(std::begin(dst), std::end(dst), [](uint8_t x) -> void { std::cout.put(x); });
+	std::cout.flush();
+
+	return EXIT_SUCCESS;
 }
-
-#endif /* _HUFFLIB_H */

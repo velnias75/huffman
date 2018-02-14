@@ -23,34 +23,13 @@
 
 #include "hufflib.h"
 
-int main(int, char **) {
+int main(int argc, char **argv) {
 
-	HUFFMAN::ALPHABET alpha;
-	HUFFMAN::CSEQ    source;
+	HUFFMAN::CSEQ source;
 
-	{
-		std::unordered_map<char, std::size_t> m;
-		std::size_t ms = 0u;
-		char i;
+	const HUFFMAN huff(huffman::huffread(source, argc == 2 ? argv[1] : "",
+		argc == 2 && argv[1][0] != '-'));
 
-		while(!std::cin.read(&i, 1).eof()) {
-			++m[i];
-			++ms;
-			source.emplace_back(i);
-		}
-
-#ifdef HAVE_RATIONAL_H
-		const PROBABILITY pf(1ul, ms);
-#else
-		const PROBABILITY pf(1.0f/ms);
-#endif
-
-		for(const auto& mi : m) {
-			alpha.emplace_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * PROBABILITY(mi.second)));
-		}
-	}
-
-	const HUFFMAN huff(alpha);
 	HUFFMAN::CODE enc(huff.encode(std::begin(source), std::end(source)));
 
 	std::cerr << "Encoded into " << enc.size() << " bits: "

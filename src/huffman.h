@@ -29,7 +29,6 @@ namespace huffman {
 template<class CharType, class PropType = double, class BitSeq = std::vector<bool>>
 class huffman {
 
-	huffman(const huffman&);
 	huffman& operator=(const huffman&);
 
 public:
@@ -69,11 +68,17 @@ private:
 		_tree_node& operator=(const _tree_node&);
 
 	public:
-		_tree_node() : m_probability(0), m_name(0), m_leaf(true), m_left(0L), m_right(0L) {}
-		_tree_node(const probability_type& p, _tree_node *l, _tree_node *r) : m_probability(p),
-			m_name(0), m_leaf(false), m_left(l), m_right(r) {}
+		_tree_node() : m_probability(0), m_name(0), m_leaf(true), m_height(0u),
+			m_left(0L), m_right(0L) {}
+		_tree_node(const probability_type& p, _tree_node *l, _tree_node *r, std::size_t h = 0u)
+			: m_probability(p), m_name(0), m_leaf(false), m_height(h), m_left(l), m_right(r) {}
 		_tree_node(const probability_type& p, const character_type &c) : m_probability(p),
-			m_name(c), m_leaf(true), m_left(0L), m_right(0L) {}
+			m_name(c), m_leaf(true), m_height(0u), m_left(0L), m_right(0L) {}
+
+		explicit _tree_node(const _tree_node *o) : m_probability(o->m_probability),
+			m_name(o->m_name), m_leaf(o->m_leaf), m_height(o->m_height),
+			m_left(o->m_left ? new _tree_node(o->m_right) : 0L),
+			m_right(o->m_right ? new _tree_node(o->m_right) : 0L) {}
 
 		const probability_type &probability() const {
 			return m_probability;
@@ -85,6 +90,10 @@ private:
 
 		bool leaf() const {
 			return m_leaf;
+		}
+
+		std::size_t height() const {
+			return m_height;
 		}
 
 		_tree_node * left() const {
@@ -99,6 +108,7 @@ private:
 		const probability_type m_probability;
 		const character_type m_name;
 		const bool m_leaf;
+		const std::size_t m_height;
 
 		_tree_node * const m_left;
 		_tree_node * const m_right;
@@ -108,7 +118,9 @@ public:
 	typedef std::unordered_map<character_type, CODE> DICT;
 	typedef _tree_node TREE;
 
-	explicit huffman(const ALPHABET& a) : m_tree(build_tree(a)),
+	huffman(const huffman &o) : m_tree(new TREE(o.m_tree)), m_dictionary(o.m_dictionary) {}
+
+	explicit huffman(const ALPHABET &a) : m_tree(build_tree(a)),
 		m_dictionary(build_dictionary(a)) {}
 
 	~huffman() {
@@ -119,7 +131,6 @@ public:
 	CODE encode(IIter b, IIter e) const {
 
 		CODE code;
-		code.reserve(4096u);
 
 		for(auto it(b); it != e; ++it) {
 
@@ -235,7 +246,8 @@ private:
 			min[1] = pq.top();
 			pq.pop();
 
-			pq.push(new TREE_NODE(min[0]->probability() + min[1]->probability(), min[0], min[1]));
+			pq.push(new TREE_NODE(min[0]->probability() + min[1]->probability(),
+				min[0], min[1], std::max(min[0]->height(), min[1]->height()) + 1u));
 		}
 
 		return pq.top();

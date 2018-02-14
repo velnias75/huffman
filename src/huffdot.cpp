@@ -19,7 +19,6 @@
 
 #include <iostream>
 #include <iterator>
-#include <fstream>
 
 #include "hufflib.h"
 
@@ -58,50 +57,13 @@ static void tree2dot(const HUFFMAN::TREE * const n, const std::string &l) {
 	}
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
 
-	HUFFMAN::ALPHABET alpha;
-	HUFFMAN::CSEQ    source;
+	HUFFMAN::CSEQ source;
 
-	{
-		std::istream *in;
+	const HUFFMAN huff(huffman::huffread(source, argc == 2 ? argv[1] : "",
+		argc == 2 && argv[1][0] != '-', 56u));
 
-		const bool isFile(argc == 2 && argv[1][0] != '-');
-
-		if(isFile) {
-			in = new std::ifstream(argv[1], std::ios::in|std::ios::binary);
-		} else {
-			in = &std::cin;
-		}
-
-		std::unordered_map<char, std::size_t> m;
-		std::size_t ms = 0u;
-		char i;
-
-		while(!in->read(&i, 1).eof()) {
-			++m[i];
-
-			if(ms < 56u) source.emplace_back(i);
-
-			++ms;
-		}
-
-		if(isFile) {
-			delete in;
-		}
-
-#ifdef HAVE_RATIONAL_H
-		const PROBABILITY pf(1ul, ms);
-#else
-		const PROBABILITY pf(1.0f/ms);
-#endif
-
-		for(const auto& mi : m) {
-			alpha.emplace_back(HUFFMAN::ALPHABET_ENTRY(mi.first, pf * PROBABILITY(mi.second)));
-		}
-	}
-
-	const HUFFMAN huff(alpha);
 	const bool binary = std::find_if(std::begin(source), std::end(source),
 		[](const HUFFMAN::CSEQ::value_type &x) { return !std::isprint(x); }) != std::end(source);
 
@@ -133,7 +95,8 @@ int main(int argc, char **argv) {
 		std::cout << "binary input";
 	}
 
-	std::cout << (source.size() > 55u ? "..." : "") <<  "\"" << std::endl;
+	std::cout << (source.size() > 55u ? "..." : "") <<  "\\nmax. # of bits: "
+		<< huff.tree()->height() << "\"" << std::endl;
 	std::cout << std::endl << "\tN" << std::hex << huff.tree() << nodeLabel(huff.tree()) << ";"
 		<< std::endl;
 	tree2dot(huff.tree(), "");

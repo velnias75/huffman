@@ -24,6 +24,7 @@ AC_CHECK_HEADER_STDBOOL
 # Checks for typedefs, structures, and compiler characteristics.
 AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
 AC_TYPE_SIZE_T
+AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 
 # Checks for library functions.
