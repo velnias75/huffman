@@ -114,11 +114,31 @@ private:
 		_tree_node * const m_right;
 	} TREE_NODE;
 
+	struct _dict_key;
+
+	typedef struct {
+		std::size_t operator()(const _dict_key &k) const {
+			return (k.length + k.bcode) % static_cast<uint64_t>(8589934591u);
+		}
+	} DICT_KEY_HASH;
+
 public:
-	typedef std::unordered_map<character_type, CODE> DICT;
+	typedef struct _dict_key {
+		uint8_t length;
+		uint64_t bcode;
+
+		friend bool operator==(const _dict_key &a, const _dict_key &b) {
+			return a.length == b.length && a.bcode == b.bcode;
+		}
+
+	} DICT_KEY;
+
+	typedef std::unordered_map<DICT_KEY, character_type, DICT_KEY_HASH> DICT;
 	typedef _tree_node TREE;
 
 	huffman(const huffman &o) : m_tree(new TREE(o.m_tree)), m_dictionary(o.m_dictionary) {}
+
+	explicit huffman(const DICT &d) : m_tree(0l), m_dictionary(d) {}
 
 	explicit huffman(const ALPHABET &a) : m_tree(build_tree(a)),
 		m_dictionary(build_dictionary(a)) {}
@@ -134,11 +154,10 @@ public:
 
 		for(auto it(b); it != e; ++it) {
 
-			const auto &r(m_dictionary.find(*it));
-			const auto &bits(r->second);
+			CODE pcode;
 
-			if(r != std::end(m_dictionary)) {
-				for(const auto &bit : bits) code.emplace_back(bit);
+			if(lookup(*it, pcode, m_tree)) {
+				code.insert(std::end(code), std::begin(pcode), std::end(pcode));
 			} else break;
 		}
 
@@ -146,18 +165,44 @@ public:
 	}
 
 	template<class IIter>
-	CSEQ decode(IIter b, IIter e) const {
+	CSEQ decode(IIter b, IIter e, uint64_t len = 0u) const {
 
 		CSEQ n;
-		const TREE *p = m_tree;
 
-		for(auto it(b); it != e; ++it) {
+		if(!m_tree) {
 
-			p = *it ? p->right() : p->left();
+			for(auto it(b); it < e;) {
 
-			if(!(p->left() || p->right())) {
-				n.emplace_back(p->name());
-				p = m_tree;
+				for(const auto &di : m_dictionary) {
+
+					uint64_t ch = 0u;
+
+					for(uint8_t ci = 0; ci < di.first.length; ++ci) {
+						if((it + ci) < e && *(it + ci)) ch |= 1u << ci;
+					}
+
+					if(ch == di.first.bcode) {
+						n.emplace_back(di.second);
+						it += di.first.length;
+						break;
+					}
+				}
+
+				if(static_cast<uint64_t>(std::distance(b, it)) >= len) break;
+			}
+
+		} else {
+
+			const TREE *p = m_tree;
+
+			for(auto it(b); it != e; ++it) {
+
+				p = *it ? p->right() : p->left();
+
+				if(!(p->left() || p->right())) {
+					n.emplace_back(p->name());
+					p = m_tree;
+				}
 			}
 		}
 
@@ -175,10 +220,10 @@ public:
 	}
 
 private:
-	void delete_tree(_tree_node *n) {
+	void delete_tree(_tree_node *n) const {
 
-		if(n->left()) delete_tree(n->left());
-		if(n->right()) delete_tree(n->right());
+		if(n && n->left()) delete_tree(n->left());
+		if(n && n->right()) delete_tree(n->right());
 
 		delete n;
 	}
@@ -206,7 +251,7 @@ private:
 		return false;
 	}
 
-	DICT build_dictionary(const ALPHABET& a) {
+	DICT build_dictionary(const ALPHABET& a) const {
 
 		DICT d;
 
@@ -215,7 +260,17 @@ private:
 			CODE code;
 
 			if(lookup(c.character(), code, m_tree)) {
-				d.emplace(std::make_pair(c.character(), code));
+
+				uint64_t cc = 0u;
+				uint8_t bit = 0u;
+
+				for(const auto &i : code) {
+					if(i) cc |= 1u << bit;
+					++bit;
+				}
+
+				d.emplace(std::make_pair(DICT_KEY { static_cast<uint8_t>(code.size()), cc },
+					c.character()));
 			}
 		}
 
@@ -228,9 +283,11 @@ private:
 		}
 	};
 
-	TREE *build_tree(const ALPHABET &n) {
+	typedef std::priority_queue<TREE_NODE *, std::vector<TREE_NODE *>, _node_cmp> PQ;
 
-		std::priority_queue<TREE_NODE *, std::vector<TREE_NODE *>, _node_cmp> pq;
+	TREE *build_tree(const ALPHABET &n) const {
+
+		PQ pq;
 
 		for(const ALPHABET_ENTRY &a : n) {
 			pq.push(new TREE_NODE(a.probability(), a.character()));

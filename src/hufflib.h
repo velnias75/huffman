@@ -45,11 +45,14 @@ typedef huffman::huffman<char, PROBABILITY, std::vector<uint_fast8_t>> HUFFMAN;
 
 namespace huffman {
 
+#define HUFFVER 0x20180214 // new version: today (2018-02-14)
+
 typedef struct {
 	const uint8_t magic[4] = { 'H', 'u', 'F', 'f' }; // "HuFf"
-	const uint32_t version = 0x20180214; // new version: today (2018-02-14)
+	const uint32_t version = HUFFVER;
 	uint32_t dict_entry_size = 0u;
 	uint32_t dict_entries = 0u;
+	uint64_t bit_length = 0u;
 } HEADER;
 
 HUFFMAN huffread(HUFFMAN::CSEQ &source, const std::string &fname, bool isFile,

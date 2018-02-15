@@ -37,12 +37,11 @@ int main(int argc, char **argv) {
 		<< (float(enc.size() * 100u)/float(source.size()*sizeof(HUFFMAN::character_type)*8u))
 		<< "%" << std::endl;
 	std::cerr << "Dictionary has " << huff.dictionary().size() <<
-		" entries with an average code of " << std::defaultfloat
-		<< ((float)std::accumulate(std::begin(huff.dictionary()), std::end(huff.dictionary()),
-				HUFFMAN::DICT::mapped_type::size_type(0),
-				[](const HUFFMAN::DICT::mapped_type::size_type &a,
-					const HUFFMAN::DICT::value_type &b)
-						{ return a + b.second.size(); })/(float)huff.dictionary().size())
+		" entries with an average code of " << std::defaultfloat <<
+			(std::accumulate(std::begin(huff.dictionary()), std::end(huff.dictionary()),
+				0.0f, [](float a, const HUFFMAN::DICT::value_type &b)
+					{ return a + static_cast<float>(b.first.length); }) /
+					static_cast<float>(huff.dictionary().size()))
 		<< " bits." << std::endl;
 
 	HUFFMAN::CSEQ dec(huff.decode(std::begin(enc), std::end(enc)));

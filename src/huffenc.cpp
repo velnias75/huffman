@@ -32,11 +32,32 @@ int main(int argc, char **argv) {
 	huffman::HEADER header;
 
 	header.dict_entries = huff.dictionary().size();
-	header.dict_entry_size = 8u + ((huff.tree()->height() % 8u) ?
+	header.dict_entry_size = 16u + ((huff.tree()->height() % 8u) ?
 		huff.tree()->height() + (8u - huff.tree()->height() % 8u) :
 		huff.tree()->height());
+	header.bit_length = enc.size();
 
 	std::cout.write(reinterpret_cast<char *>(&header), sizeof(huffman::HEADER));
+
+	for(const auto &e : huff.dictionary()) {
+
+		std::cout.put(e.second);
+
+		uint8_t  cl = e.first.length;
+		uint64_t cc = e.first.bcode;
+
+		std::cout.write(reinterpret_cast<char *>(&cl), sizeof(uint8_t));
+
+		if(header.dict_entry_size < 25u) {
+			std::cout.write(reinterpret_cast<char *>(&cc), sizeof(uint8_t));
+		} else if(header.dict_entry_size < 33u) {
+			std::cout.write(reinterpret_cast<char *>(&cc), sizeof(uint16_t));
+		} else if(header.dict_entry_size < 49u) {
+			std::cout.write(reinterpret_cast<char *>(&cc), sizeof(uint32_t));
+		} else {
+			std::cout.write(reinterpret_cast<char *>(&cc), sizeof(uint64_t));
+		}
+	}
 
 	uint8_t     c = 0u;
 	std::size_t b = 0u;

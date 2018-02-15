@@ -1,5 +1,5 @@
-bin_PROGRAMS = huffdot
-noinst_PROGRAMS = hufftest huffenc
+bin_PROGRAMS = huffdot huffenc huffdec
+noinst_PROGRAMS = hufftest
 noinst_LIBRARIES = libhufflib.a
 
 pkginclude_HEADERS = huffman.h
@@ -19,3 +19,6 @@ huffdot_LDADD = libhufflib.a $(RATIONAL_LIBS)
 
 huffenc_SOURCES = huffenc.cpp
 huffenc_LDADD = libhufflib.a $(RATIONAL_LIBS)
+
+huffdec_SOURCES = huffdec.cpp
+huffdec_LDADD = libhufflib.a $(RATIONAL_LIBS)
