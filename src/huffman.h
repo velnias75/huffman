@@ -23,6 +23,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <queue>
+#include <set>
 
 namespace huffman {
 
@@ -96,7 +97,7 @@ private:
 			return m_height;
 		}
 
-		_tree_node * left() const {
+		_tree_node *left() const {
 			return m_left;
 		}
 
@@ -129,6 +130,10 @@ public:
 
 		friend bool operator==(const _dict_key &a, const _dict_key &b) {
 			return a.length == b.length && a.bcode == b.bcode;
+		}
+
+		friend bool operator<(const _dict_key &a, const _dict_key &b) {
+			return a.length < b.length && a.bcode < b.bcode;
 		}
 
 	} DICT_KEY;
@@ -171,9 +176,12 @@ public:
 
 		if(!m_tree) {
 
+			std::set<typename DICT::value_type> dv(std::begin(m_dictionary),
+				std::end(m_dictionary));
+
 			for(auto it(b); it < e;) {
 
-				for(const auto &di : m_dictionary) {
+				for(const auto &di : dv) {
 
 					uint64_t ch = 0u;
 
